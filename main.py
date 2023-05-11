@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget,\
     QGridLayout, QLineEdit, QPushButton, QMainWindow, QTableWidget, \
-    QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar
+    QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar, QStatusBar
 from PyQt6.QtGui import QAction, QIcon
 import sys
 # QMainWindow allows us to have division among different sections of App
@@ -39,10 +39,33 @@ class MainWindow(QMainWindow):
         # to remove the index which we were coming left side
         self.setCentralWidget(self.table)
 
+        # Create a toolbar and its elements
         toolbar = QToolBar()
         toolbar.setMovable(True)
         self.addToolBar(toolbar)
         toolbar.addAction(add_student_action)
+
+        # create a status bar and its elements
+        self.statusbar = QStatusBar
+        self.setStatusBar(self.statusbar)
+
+        # detect a self click
+        self.table.cellClicked.connect(self.cell_clicked)
+
+    def cell_clicked(self):
+        edit_button = QPushButton("Edit Record")
+        edit_button.clicked.connect(self.edit)
+
+        delete_button = QPushButton("Delete Record")
+        delete_button.clicked.connect(self.delete)
+
+        children = self.findChildren(QPushButton)
+        if children:
+            for child in children:
+                self.statusbar.removeWidget(child)
+
+        self.statusbar.addWidget(edit_button)
+        self.statusbar.addWidget(delete_button)
 
     def load_data(self):
         connection = sqlite3.connect("database.db")
@@ -60,10 +83,25 @@ class MainWindow(QMainWindow):
         dialog = InsertDialog()
         dialog.exec()
 
-
     def search(self):
         dialog = SearchDialog()
         dialog.exec()
+
+    def edit(self):
+        dialog = EditDialog()
+        dialog.exec()
+
+    def delete(self):
+        dialog = DeleteDialog()
+        dialog.exec()
+
+
+class EditDialog(QDialog):
+    pass
+
+
+class DeleteDialog(QDialog):
+    pass
 
 
 class InsertDialog(QDialog):
