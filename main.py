@@ -10,6 +10,18 @@ import sys
 # QMainWindow allows us to have division among different sections of App
 
 
+class DatabaseConnection:
+    def __init__(self, database_file="database.db"):
+        self.database_file = database_file
+
+    def connect(self):
+        connection = sqlite3.connect(self.database_file)
+        return connection
+
+
+# else connection is established as
+# connection = sqlite3.connect("database.db")
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()  # to instantiate the parent in its method
@@ -28,6 +40,7 @@ class MainWindow(QMainWindow):
         help_menu_item.addAction(about_action)
         about_action.setMenuRole(QAction.MenuRole.NoRole)
         # used in mac only if help section is not being displayed
+        about_action.triggered.connect(self.about)
 
         search_action = QAction(QIcon("icons/search.png"), "Search", self)
         edit_menu_item.addAction(search_action)
@@ -69,7 +82,7 @@ class MainWindow(QMainWindow):
         self.statusbar.addWidget(delete_button)
 
     def load_data(self):
-        connection = sqlite3.connect("database.db")
+        connection = DatabaseConnection().connect()
         result = connection.execute("SELECT * FROM students")
         # print(list(result))
         self.table.setRowCount(0)
@@ -96,6 +109,10 @@ class MainWindow(QMainWindow):
         dialog = DeleteDialog()
         dialog.exec()
 
+    def about(self):
+        dialog = AboutDialog()
+        dialog.exec()
+
 
 class EditDialog(QDialog):
     def __init__(self):
@@ -106,18 +123,18 @@ class EditDialog(QDialog):
 
         layout = QVBoxLayout()
 
-        index = studentdata.table.currentRow()
-        student_name = studentdata.table.item(index, 1).text()
+        index = student_data.table.currentRow()
+        student_name = student_data.table.item(index, 1).text()
 
         # get id from the Selected Row
-        self.student_id = studentdata.table.item(index, 0).text()
+        self.student_id = student_data.table.item(index, 0).text()
 
         # Add Student name Widgets
         self.student_name = QLineEdit(student_name)
         self.student_name.setPlaceholderText("Name")
         layout.addWidget(self.student_name)
 
-        course_name = studentdata.table.item(index, 2).text()
+        course_name = student_data.table.item(index, 2).text()
         # Add combo Box of Courses
         self.course_name = QComboBox()
         courses = ["Biology", "Maths", "Chemistry", "Economics", "Physics"]
@@ -126,7 +143,7 @@ class EditDialog(QDialog):
         # the two course_name are different
         layout.addWidget(self.course_name)
 
-        mobile = studentdata.table.item(index, 3).text()
+        mobile = student_data.table.item(index, 3).text()
         # add mobile widget
         self.mobile_number = QLineEdit(mobile)
         self.mobile_number.setPlaceholderText("Mobile Number")
@@ -140,7 +157,7 @@ class EditDialog(QDialog):
         self.setLayout(layout)
 
     def update_student(self):
-        connection = sqlite3.connect("database.db")
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         cursor.execute("UPDATE students SET name = ?, course = ?, mobile = ? "
                        "where id = ?", (self.student_name.text(),
@@ -152,7 +169,7 @@ class EditDialog(QDialog):
         cursor.close()
         connection.close()
         # refresh the table
-        studentdata.load_data()
+        student_data.load_data()
 
 
 class DeleteDialog(QDialog):
@@ -173,16 +190,16 @@ class DeleteDialog(QDialog):
         yes.clicked.connect(self.delete_student)
 
     def delete_student(self):
-        index = studentdata.table.currentRow()
-        student_id = studentdata.table.item(index, 0).text()
+        index = student_data.table.currentRow()
+        student_id = student_data.table.item(index, 0).text()
 
-        connection = sqlite3.connect("database.db")
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         cursor.execute("DELETE from students WHERE id = ?", (student_id, ))
         connection.commit()
         cursor.close()
         connection.close()
-        studentdata.load_data()
+        student_data.load_data()
 
         self.close()
         confirmation_widget = QMessageBox()
@@ -227,7 +244,7 @@ class InsertDialog(QDialog):
         name = self.student_name.text()
         course = self.course_name.itemText(self.course_name.currentIndex())
         mobile = self.mobile_number.text()
-        connection = sqlite3.connect("database.db")
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         cursor.execute("INSERT INTO students (name, course, mobile) "
                        "VALUES(?, ?, ?)", (name, course, mobile))
@@ -236,7 +253,7 @@ class InsertDialog(QDialog):
         cursor.close()
         connection.close()
 
-        studentdata.load_data()
+        student_data.load_data()
 
 
 class SearchDialog(QDialog):
@@ -262,24 +279,34 @@ class SearchDialog(QDialog):
 
     def search(self):
         name = self.student_name.text()
-        connection = sqlite3.connect("database.db")
+        connection = DatabaseConnection().connect()
         cursor = connection.cursor()
         result = cursor.execute("SELECT * FROM students WHERE name = ?", (name,))
         row = list(result)
         print(row)
-        items = studentdata.table.findItems(name, Qt.MatchFlag.MatchFixedString)
+        items = student_data.table.findItems(name, Qt.MatchFlag.MatchFixedString)
         for item in items:
             print(item)
-            studentdata.table.item(item.row(), 1).setSelected(True)
+            student_data.table.item(item.row(), 1).setSelected(True)
 
         cursor.close()
         connection.close()
 
 
+class AboutDialog(QMessageBox):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("About")
+        content = """
+        This app was created with Python and Sql for 
+        managing the Student Database
+        Feel free to use it"""
+        self.setText(content)
+
 
 
 app = QApplication(sys.argv)
-studentdata = MainWindow()
-studentdata.show()
-studentdata.load_data()
+student_data = MainWindow()
+student_data.show()
+student_data.load_data()
 sys.exit(app.exec())
